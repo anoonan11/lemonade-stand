@@ -6,6 +6,21 @@ commit.
 
 ## 2026-08-23
 
+### README — rewritten plain and factual
+- Cut the editorial passages: the "deliberately simple" demand critique, the
+  design-rationale essay, the pricing hint, and the hard-coded test count
+  (which goes stale). What remains is setup, commands, how to play, the
+  recipe/unit table, and the demand model — the facts, without commentary.
+  Design reasoning lives in this changelog and `docs/core-functionality.md`.
+- Verified the command table against `package.json` while rewriting.
+
+### README — removed the "What's not built" section
+- Chaos events are now implemented (on `feat/chaos-mode`), so leading the list
+  with them was stale, and several of the other items (weather forecasts, bulk
+  discounts, mid-season saves) were speculation that was never actually
+  discussed or planned. Deferred work is tracked in `features/`, not the
+  README.
+
 ### DayPlanner — per-supply stock, inline with the shopping rows
 - Each shopping row now shows what you have and what you'll have after the
   order, in a "Possible cups" column between the quantity input and the line
