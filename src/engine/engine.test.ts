@@ -140,6 +140,10 @@ describe('runDay', () => {
         revenueCents: 1600,
         iceMeltedUnits: 2,
         endCashCents: 9800,
+        // No chaos was passed, so the day records none of it.
+        chaos: null,
+        lemonsRotted: 0,
+        sugarLostTbsp: 0,
       },
     ])
   })
@@ -216,6 +220,83 @@ describe('runDay', () => {
   it('rejects a negative or fractional price', () => {
     expect(() => runDay(newGame('Anne'), NO_PURCHASES, -5, 10)).toThrow(/[Pp]rice/)
     expect(() => runDay(newGame('Anne'), NO_PURCHASES, 150.5, 10)).toThrow(/[Pp]rice/)
+  })
+})
+
+describe('chaos events', () => {
+  it('pestilence rots carried lemons but spares the ones bought today', () => {
+    // Start day 2 with 4 lemons in the cooler and $50.00.
+    const state = {
+      ...newGame('Anne'),
+      day: 2,
+      cashCents: 5000,
+      inventory: { iceUnits: 0, cups: 20, lemons: 4, sugarTbsp: 10 },
+    }
+    // The 4 carried lemons rot; buying 1 lb adds 4 fresh ones.
+    // Order: 1 lb ice + 1 lb lemons = 100 + 500 = 600 -> cash 4400.
+    // Stock: 10 ice, 20 cups, 4 lemons, 10 sugar -> 4 cups makeable.
+    // 40 passersby at $2.00 (25%) -> demand 10, sell 4 -> revenue 800 -> 5200.
+    const after = runDay(
+      state,
+      { iceLbs: 1, cupPacks: 0, lemonLbs: 1, sugarLbs: 0 },
+      200,
+      40,
+      'pestilence',
+    )
+    expect(after.history[0].lemonsRotted).toBe(4)
+    expect(after.history[0].chaos).toBe('pestilence')
+    expect(after.history[0].cupsSold).toBe(4)
+    expect(after.cashCents).toBe(5200)
+    expect(after.inventory.lemons).toBe(0)
+  })
+
+  it('thunderstorm empties the street no matter the real traffic', () => {
+    // Order: $18.00 -> cash 8200. 60 passersby become 0 -> no demand, no sales.
+    const after = runDay(
+      newGame('Anne'),
+      { iceLbs: 1, cupPacks: 1, lemonLbs: 2, sugarLbs: 1 },
+      200,
+      60,
+      'thunderstorm',
+    )
+    expect(after.history[0].passersby).toBe(0)
+    expect(after.history[0].demand).toBe(0)
+    expect(after.history[0].revenueCents).toBe(0)
+    expect(after.cashCents).toBe(8200)
+  })
+
+  it('windstorm cuts traffic by a quarter and halves the sugar', () => {
+    // Order: 1 lb each + 1 pack = 100 + 500 + 500 + 200 = 1300 -> cash 8700.
+    // Stock: 10 ice, 100 cups, 4 lemons, 16 sugar.
+    // Sugar: roundHalfUp(16 * 0.5) = 8 lost, 8 left.
+    // Traffic: roundHalfUp(40 * 0.75) = 30.
+    // Demand: 30 * 0.25 = 7.5, half-up -> 8. Lemons cap making at 4, sell 4.
+    // Revenue 800 -> cash 9500.
+    const after = runDay(
+      newGame('Anne'),
+      { iceLbs: 1, cupPacks: 1, lemonLbs: 1, sugarLbs: 1 },
+      200,
+      40,
+      'windstorm',
+    )
+    expect(after.history[0].passersby).toBe(30)
+    expect(after.history[0].sugarLostTbsp).toBe(8)
+    expect(after.history[0].demand).toBe(8)
+    expect(after.history[0].cupsSold).toBe(4)
+    expect(after.cashCents).toBe(9500)
+    // 16 bought - 8 blown away - 4 used = 4 left
+    expect(after.inventory.sugarTbsp).toBe(4)
+  })
+
+  it('windstorm rounds an odd sugar count half-up: 5 tbsp loses 3', () => {
+    // 5 tbsp carried, nothing bought: roundHalfUp(5 * 0.5) = roundHalfUp(2.5) = 3.
+    const state = {
+      ...newGame('Anne'),
+      inventory: { iceUnits: 0, cups: 10, lemons: 2, sugarTbsp: 5 },
+    }
+    const after = runDay(state, NO_PURCHASES, 200, 0, 'windstorm')
+    expect(after.history[0].sugarLostTbsp).toBe(3)
+    expect(after.inventory.sugarTbsp).toBe(2)
   })
 })
 

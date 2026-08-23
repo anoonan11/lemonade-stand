@@ -41,6 +41,15 @@ The game ends after day 10, or earlier if you go bankrupt (you can't make a
 cup and can't afford the ingredients for one). Your final cash goes on the
 leaderboard, which persists in `localStorage`.
 
+**Watch for chaos.** Each day rolls one chance of disaster, announced on the
+results screen: pestilence (15% — the lemons already in your cooler rot before
+you open; lemons bought that day are fine), a thunderstorm (20% — nobody walks
+by), or a windstorm (10% — a quarter of the crowd stays home and half your
+sugar blows away for good). The other 55% of days are ordinary.
+
+**A hint:** one cup costs about $1.53 in ingredients. Price below that and every
+sale loses you money.
+
 ## Recipe and units
 
 Supplies are bought in one unit and consumed in another; the engine converts

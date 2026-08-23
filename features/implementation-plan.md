@@ -79,7 +79,7 @@ Pure TypeScript in `src/engine/`, no React imports.
 
 Only if time allows, in rough priority order.
 
-- [ ] Chaos event: lemon disease spoils part of the stock overnight
+- [ ] Chaos events — in progress, tracked in `features/chaos-events.md`
 - [ ] Competition: a rival stand undercuts you for a few days
 - [ ] Weather forecast that shifts foot traffic and gives the player something
       to plan against

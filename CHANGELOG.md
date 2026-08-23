@@ -21,6 +21,42 @@ commit.
   discussed or planned. Deferred work is tracked in `features/`, not the
   README.
 
+### Chaos events — pestilence, thunderstorm, windstorm
+- Three of the five scenarios from `docs/chaos-generator.md`: pestilence
+  (15%), thunderstorm (20%), windstorm (10%), at most one per day. The TikTok
+  lemon cap and the bad review are deferred — both need persistent state in
+  `GameState` and planner UI, which didn't fit the time box. The full scope
+  decision lives in `features/chaos-events.md`.
+- Ruled out a runtime LLM "chaos agent": it would need an API key in the
+  browser or a backend, and the odds table has to stay deterministic and
+  testable. If we ever want generative flavor, it'll be a committed pool of
+  pre-written variants, not a live call.
+- Chaos follows the same randomness-at-the-edge pattern as foot traffic:
+  `runDay` takes the event as a parameter so tests pin exact outcomes, and
+  `simulateDay` supplies `rollChaos()` — one draw against cumulative odds in
+  `CHAOS_ODDS`, and still the only `Math.random()` file.
+- Pestilence rots only the lemons carried in from yesterday; lemons bought
+  that day survive. The doc says inventory rots "to start the day", and the
+  order arrives fresh.
+- Windstorm sugar is gone for good rather than restored next morning —
+  simpler, and "blown away" reads that way. The loss applies after shopping,
+  today's bag included, rounded half-up.
+- `DayResult.passersby` now records traffic *after* chaos — it's who actually
+  walked by, so the existing results copy ("Not one person walked by") keeps
+  working under a thunderstorm.
+- `DayResult` gains `chaos`, `lemonsRotted`, and `sugarLostTbsp`, which feed
+  a banner at the top of the results card: emoji, event name, and what it
+  did. The words live in `DayResults`; the engine only reports numbers.
+- Four new engine tests, hand-computed: pestilence sparing the day's
+  shopping, thunderstorm zeroing a 60-person day, a windstorm day end to end,
+  and the half-up rounding on an odd sugar count.
+
+### Feature plans move to `features/`
+- Each feature now gets a plan file in `features/`, written up front and
+  checked off as work lands, including what was deliberately not built and
+  why. `CHANGELOG.md` stays the record of what happened; `features/` is the
+  record of what's planned and deferred. Convention added to `CLAUDE.md`.
+
 ### DayPlanner — per-supply stock, inline with the shopping rows
 - Each shopping row now shows what you have and what you'll have after the
   order, in a "Possible cups" column between the quantity input and the line

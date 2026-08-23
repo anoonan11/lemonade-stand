@@ -13,10 +13,12 @@ import {
   REFERENCE_PRICE_CENTS,
   BASE_RATE,
   MAX_RATE,
+  WIND_TRAFFIC_FACTOR,
+  WIND_SUGAR_LOSS,
 } from './constants'
-import type { DayResult, GameState, Inventory, Purchases } from './types'
+import type { ChaosEvent, DayResult, GameState, Inventory, Purchases } from './types'
 import { roundHalfUp } from './money'
-import { randomPassersby } from './rng'
+import { randomPassersby, rollChaos } from './rng'
 
 export function newGame(playerName: string): GameState {
   return {
@@ -96,14 +98,16 @@ export function costToCoverOneCup(inv: Inventory): number {
   return cost
 }
 
-// Runs one full day: buy supplies, sell to whoever shows up, melt the ice,
-// then check whether the game is over. Pure — passersby is passed in so
-// tests can pin the outcome; simulateDay supplies the random value.
+// Runs one full day: buy supplies, weather any chaos, sell to whoever shows
+// up, melt the ice, then check whether the game is over. Pure — passersby and
+// chaos are passed in so tests can pin the outcome; simulateDay supplies the
+// random values.
 export function runDay(
   state: GameState,
   purchases: Purchases,
   priceCents: number,
   passersby: number,
+  chaos: ChaosEvent | null = null,
 ): GameState {
   if (state.status !== 'playing') {
     throw new Error('This game is over.')
@@ -116,9 +120,27 @@ export function runDay(
     throw new Error(problem)
   }
 
+  // Pestilence rots the lemons already in the cooler before the day starts.
+  // Lemons bought today arrive fresh and survive.
+  const lemonsRotted = chaos === 'pestilence' ? state.inventory.lemons : 0
+  const opening: Inventory = { ...state.inventory, lemons: state.inventory.lemons - lemonsRotted }
+
   const spentCents = purchaseCost(purchases)
   let cash = state.cashCents - spentCents
-  const stocked = addPurchases(state.inventory, purchases)
+  let stocked = addPurchases(opening, purchases)
+
+  // A windstorm blows away half the sugar — today's shopping included.
+  const sugarLostTbsp =
+    chaos === 'windstorm' ? roundHalfUp(stocked.sugarTbsp * WIND_SUGAR_LOSS) : 0
+  stocked = { ...stocked, sugarTbsp: stocked.sugarTbsp - sugarLostTbsp }
+
+  // Chaos hits foot traffic before demand: a thunderstorm empties the street,
+  // a windstorm keeps a quarter of the crowd home.
+  if (chaos === 'thunderstorm') {
+    passersby = 0
+  } else if (chaos === 'windstorm') {
+    passersby = roundHalfUp(passersby * WIND_TRAFFIC_FACTOR)
+  }
 
   const demand = roundHalfUp(passersby * demandRate(priceCents))
   const cupsSold = Math.min(demand, cupsMakeable(stocked))
@@ -144,6 +166,9 @@ export function runDay(
     revenueCents,
     iceMeltedUnits,
     endCashCents: cash,
+    chaos,
+    lemonsRotted,
+    sugarLostTbsp,
   }
 
   let status: GameState['status'] = 'playing'
@@ -169,5 +194,5 @@ export function simulateDay(
   purchases: Purchases,
   priceCents: number,
 ): GameState {
-  return runDay(state, purchases, priceCents, randomPassersby())
+  return runDay(state, purchases, priceCents, randomPassersby(), rollChaos())
 }
