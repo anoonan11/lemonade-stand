@@ -59,13 +59,22 @@ export function addPurchases(inv: Inventory, p: Purchases): Inventory {
   }
 }
 
+// How many cups each ingredient could cover on its own. Every recipe amount is
+// currently 1, so these match the raw inventory counts, but dividing by RECIPE
+// keeps them right if a recipe amount ever changes.
+export function cupsPerIngredient(inv: Inventory): Record<keyof Inventory, number> {
+  return {
+    lemons: Math.floor(inv.lemons / RECIPE.lemons),
+    sugarTbsp: Math.floor(inv.sugarTbsp / RECIPE.sugarTbsp),
+    iceUnits: Math.floor(inv.iceUnits / RECIPE.iceUnits),
+    cups: Math.floor(inv.cups / RECIPE.cups),
+  }
+}
+
+// You can only make as many cups as the scarcest ingredient allows.
 export function cupsMakeable(inv: Inventory): number {
-  return Math.min(
-    Math.floor(inv.lemons / RECIPE.lemons),
-    Math.floor(inv.sugarTbsp / RECIPE.sugarTbsp),
-    Math.floor(inv.iceUnits / RECIPE.iceUnits),
-    Math.floor(inv.cups / RECIPE.cups),
-  )
+  const per = cupsPerIngredient(inv)
+  return Math.min(per.lemons, per.sugarTbsp, per.iceUnits, per.cups)
 }
 
 // Fraction of passersby who buy a cup at the given price: BASE_RATE at the

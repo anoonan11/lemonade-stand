@@ -5,6 +5,7 @@ import {
   validatePurchases,
   addPurchases,
   cupsMakeable,
+  cupsPerIngredient,
   demandRate,
   costToCoverOneCup,
   runDay,
@@ -60,6 +61,27 @@ describe('cupsMakeable', () => {
 
   it('is zero with an empty pantry', () => {
     expect(cupsMakeable(EMPTY_INVENTORY)).toBe(0)
+  })
+})
+
+describe('cupsPerIngredient', () => {
+  it('reports what each ingredient covers on its own', () => {
+    // Every RECIPE amount is 1, so each count divides straight through:
+    // 10/1 ice, 100/1 cups, 8/1 lemons, 16/1 sugar.
+    expect(cupsPerIngredient({ iceUnits: 10, cups: 100, lemons: 8, sugarTbsp: 16 })).toEqual({
+      iceUnits: 10,
+      cups: 100,
+      lemons: 8,
+      sugarTbsp: 16,
+    })
+  })
+
+  it('agrees with cupsMakeable — the smallest entry is the cup count', () => {
+    const inv: Inventory = { iceUnits: 30, cups: 100, lemons: 12, sugarTbsp: 48 }
+    // min(30, 100, 12, 48) = 12, the lemons
+    const per = cupsPerIngredient(inv)
+    expect(Math.min(per.iceUnits, per.cups, per.lemons, per.sugarTbsp)).toBe(12)
+    expect(cupsMakeable(inv)).toBe(12)
   })
 })
 

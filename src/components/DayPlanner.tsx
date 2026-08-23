@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import type { GameState, Purchases } from '../engine/types'
+import type { GameState, Inventory, Purchases } from '../engine/types'
 import {
   addPurchases,
   cupsMakeable,
+  cupsPerIngredient,
   demandRate,
   purchaseCost,
   validatePurchases,
@@ -34,6 +35,20 @@ function quantity(text: string): number {
   return trimmed === '' ? 0 : Number(trimmed)
 }
 
+// Inventory keys paired with the words used in the legend, in row order.
+const SUPPLY_NAMES: Array<[keyof Inventory, string]> = [
+  ['iceUnits', 'ice'],
+  ['cups', 'cups'],
+  ['lemons', 'lemons'],
+  ['sugarTbsp', 'sugar'],
+]
+
+// "ice", "ice and cups", "ice, cups and lemons"
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names.join('')
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
 interface SupplyRowProps {
   label: string
   unit: string
@@ -41,14 +56,32 @@ interface SupplyRowProps {
   yields: string
   value: string
   onChange: (value: string) => void
+  // Cups' worth of this ingredient now, and after the order. `after` is null
+  // when the typed quantities don't parse, so there is nothing to project.
+  have: number
+  after: number | null
+  // True when this ingredient is the one capping the day's cups. Marks the
+  // whole row rather than the number, so the legend below has something to
+  // point at.
+  limiting: boolean
 }
 
-function SupplyRow({ label, unit, unitCents, yields, value, onChange }: SupplyRowProps) {
+function SupplyRow({
+  label,
+  unit,
+  unitCents,
+  yields,
+  value,
+  onChange,
+  have,
+  after,
+  limiting,
+}: SupplyRowProps) {
   const count = quantity(value)
   const lineCents = Number.isInteger(count) && count >= 0 ? count * unitCents : null
 
   return (
-    <div className="supply-row">
+    <div className={limiting ? 'supply-row limiting' : 'supply-row'}>
       <label className="supply-label" htmlFor={`buy-${label}`}>
         <span className="supply-name">{label}</span>
         <span className="supply-hint">
@@ -65,6 +98,15 @@ function SupplyRow({ label, unit, unitCents, yields, value, onChange }: SupplyRo
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
+      {/* Three fixed cells rather than a flex run, so the arrows and both
+          numbers line up down the column whatever their digit count. */}
+      <span className="supply-stock">
+        <span className="stock-have">{have}</span>
+        <span className="stock-arrow" aria-hidden="true">
+          &rarr;
+        </span>
+        <span className="stock-after">{after === null ? '—' : after}</span>
+      </span>
       <span className="supply-cost">{lineCents === null ? '—' : formatCents(lineCents)}</span>
     </div>
   )
@@ -96,12 +138,26 @@ export default function DayPlanner({ game, onRunDay, error }: Props) {
   const stocked = amountsUsable ? addPurchases(game.inventory, purchases) : game.inventory
   const makeable = cupsMakeable(stocked)
 
+  // Each row shows cups' worth now and after the order. Because every recipe
+  // amount is 1, these are directly comparable, and `makeable` is the smallest
+  // of the "after" numbers — the row that ties it is the bottleneck.
+  const have = cupsPerIngredient(game.inventory)
+  const after = amountsUsable ? cupsPerIngredient(stocked) : null
+  // Nothing is worth flagging when the order makes no cups at all — every row
+  // would tie at zero. The "can't make a single cup" warning covers that case.
+  const isLimiting = (cupsAfter: number | undefined) =>
+    cupsAfter !== undefined && makeable > 0 && cupsAfter === makeable
+
+  // Names of whatever ties for the limit, for the legend under the list. Ties
+  // are real — two ingredients can cap the day equally — so this is a list.
+  const limitingNames = SUPPLY_NAMES.filter(([key]) => isLimiting(after?.[key])).map(
+    ([, name]) => name,
+  )
+
   const priceCents = parseDollarsToCents(price)
   const priceError = priceCents === null ? 'Enter a price like 2.00.' : null
   const busiestDay = priceCents === null ? 0 : roundHalfUp(MAX_PASSERSBY * demandRate(priceCents))
 
-  const carried = game.inventory
-  const hasCarryover = carried.cups > 0 || carried.lemons > 0 || carried.sugarTbsp > 0
   const blocked = purchaseError !== null || priceError !== null
 
   return (
@@ -119,18 +175,32 @@ export default function DayPlanner({ game, onRunDay, error }: Props) {
         <p className="cash-on-hand">{formatCents(game.cashCents)}</p>
       </div>
 
-      <p className="muted">
-        {hasCarryover ? (
-          <>
-            In the cooler: {plural(carried.cups, 'cup')}, {plural(carried.lemons, 'lemon')},{' '}
-            {plural(carried.sugarTbsp, 'tbsp', 'tbsp')} of sugar. The ice melted overnight.
-          </>
-        ) : (
-          <>Nothing in the cooler. Everything you sell today, you buy this morning.</>
-        )}
-      </p>
-
       <h3 className="subhead">Go shopping</h3>
+      <div className="supply-head">
+        <span>Supply</span>
+        <span className="head-center">Buy</span>
+        <span className="head-right">
+          <span className="head-tip">
+            Possible cups
+            {/* type="button" so it never submits the form it sits inside. */}
+            <button
+              type="button"
+              className="tip-button"
+              aria-label="What possible cups means"
+            >
+              i
+            </button>
+            <span className="tip-bubble" role="tooltip">
+              Counts what&rsquo;s already in your cooler <em>plus</em> what you&rsquo;re
+              buying &mdash; how many cups that one ingredient could cover on its own. You
+              can only make as many as the <em>lowest</em> row. Ice melts overnight, so it
+              starts every day at zero.
+            </span>
+          </span>
+          <span className="head-sub">now &rarr; after purchase</span>
+        </span>
+        <span className="head-right">Cost</span>
+      </div>
       <div className="supply-list">
         <SupplyRow
           label="Ice"
@@ -139,6 +209,9 @@ export default function DayPlanner({ game, onRunDay, error }: Props) {
           yields="10 cups"
           value={ice}
           onChange={setIce}
+          have={have.iceUnits}
+          after={after === null ? null : after.iceUnits}
+          limiting={isLimiting(after?.iceUnits)}
         />
         <SupplyRow
           label="Cups"
@@ -147,6 +220,9 @@ export default function DayPlanner({ game, onRunDay, error }: Props) {
           yields={`${CUP_PACK_SIZE} cups`}
           value={packs}
           onChange={setPacks}
+          have={have.cups}
+          after={after === null ? null : after.cups}
+          limiting={isLimiting(after?.cups)}
         />
         <SupplyRow
           label="Lemons"
@@ -155,6 +231,9 @@ export default function DayPlanner({ game, onRunDay, error }: Props) {
           yields={`${LEMONS_PER_LB} cups`}
           value={lemons}
           onChange={setLemons}
+          have={have.lemons}
+          after={after === null ? null : after.lemons}
+          limiting={isLimiting(after?.lemons)}
         />
         <SupplyRow
           label="Sugar"
@@ -163,8 +242,23 @@ export default function DayPlanner({ game, onRunDay, error }: Props) {
           yields={`${SUGAR_TBSP_PER_LB} cups`}
           value={sugar}
           onChange={setSugar}
+          have={have.sugarTbsp}
+          after={after === null ? null : after.sugarTbsp}
+          limiting={isLimiting(after?.sugarTbsp)}
         />
       </div>
+
+      {limitingNames.length > 0 && (
+        <p className="limit-note">
+          <span className="limit-swatch" aria-hidden="true" />
+          <span>
+            {limitingNames.length === 1 ? 'The outlined row is' : 'The outlined rows are'} your
+            limit &mdash; you&rsquo;ll run out of{' '}
+            {joinNames(limitingNames)} first, capping the day at {plural(makeable, 'cup')}.
+            Buy more to sell more.
+          </span>
+        </p>
+      )}
 
       <dl className="totals">
         <div>
