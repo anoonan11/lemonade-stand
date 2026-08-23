@@ -14,16 +14,23 @@ export interface Purchases {
 
 export type GameStatus = 'playing' | 'finished' | 'bankrupt'
 
+// A chaos event that can strike a day. At most one per day; most days none.
+export type ChaosEvent = 'pestilence' | 'thunderstorm' | 'windstorm'
+
 export interface DayResult {
   day: number
   priceCents: number
   spentCents: number
+  // The people who actually walked by, after any chaos effect on traffic.
   passersby: number
   demand: number
   cupsSold: number
   revenueCents: number
   iceMeltedUnits: number
   endCashCents: number
+  chaos: ChaosEvent | null
+  lemonsRotted: number // pestilence only, otherwise 0
+  sugarLostTbsp: number // windstorm only, otherwise 0
 }
 
 export interface GameState {

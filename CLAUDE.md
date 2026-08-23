@@ -44,6 +44,14 @@
 - Seed data committed to the repo. The leaderboard has something to show on first run.
 - README covers setup, the run command, how to play, and how the demand model works
 
+## Feature plans
+- Every feature gets a plan file in `features/`, written before implementation
+  and updated as the work lands — a checklist checked off as we go.
+- The plan records scope decisions, including what we decided *not* to
+  implement and why. Cut scope is part of the record, not silently dropped.
+- `CHANGELOG.md` records what happened and why; `features/` tracks what's
+  planned, in flight, and deferred.
+
 ## Changelog
 - `CHANGELOG.md` at the repo root, newest entries first, grouped by date.
 - Add an entry for each unit of work: what changed, and for anything that was a

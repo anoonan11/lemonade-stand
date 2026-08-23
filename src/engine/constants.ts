@@ -34,6 +34,18 @@ export const BASE_RATE = 0.25
 export const MAX_RATE = 0.5
 export const MAX_PASSERSBY = 100
 
+// Chaos odds, rolled once per day. At most one event can happen; the
+// remaining 55% is a normal day.
+export const CHAOS_ODDS = {
+  pestilence: 0.15,
+  thunderstorm: 0.2,
+  windstorm: 0.1,
+} as const
+
+// Windstorm effects
+export const WIND_TRAFFIC_FACTOR = 0.75 // 25% fewer passersby
+export const WIND_SUGAR_LOSS = 0.5 // half the sugar blows away
+
 // Roughly what the ingredients for one cup cost, for the player's reference.
 // Display only — a single cup works out to 152.5¢, which isn't a whole number
 // of cents, so this is rounded once and shown with a "≈". Nothing in the

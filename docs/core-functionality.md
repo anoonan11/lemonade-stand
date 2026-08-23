@@ -56,14 +56,24 @@ That works out to 152.5¢ of ingredients per cup (125¢ lemon + 12.5¢ sugar +
 
 Each day runs as one atomic step — no changes mid-day, per the brief:
 
-1. **Buy supplies.** Rejected if quantities aren't whole and non-negative, or
-   if the order costs more than the cash on hand.
-2. **People walk by.** A uniform random 0–100 of them.
-3. **Some of them buy.** See the demand model below.
-4. **Sell.** Cups sold is the lesser of demand and what the inventory can
+1. **Chaos, maybe.** One roll per day against the odds in
+   `src/engine/constants.ts` (`CHAOS_ODDS`): pestilence 15%, thunderstorm
+   20%, windstorm 10%; otherwise a normal day. Pestilence rots the lemons
+   carried in from yesterday — lemons bought today survive.
+2. **Buy supplies.** Rejected if quantities aren't whole and non-negative, or
+   if the order costs more than the cash on hand. A windstorm then blows away
+   half the sugar, today's shopping included, rounded half-up.
+3. **People walk by.** A uniform random 0–100 of them — zero in a
+   thunderstorm, reduced 25% (rounded half-up) in a windstorm.
+4. **Some of them buy.** See the demand model below.
+5. **Sell.** Cups sold is the lesser of demand and what the inventory can
    make. Revenue is price × cups sold.
-5. **Ice melts.** Any ice left at the end of the day is gone. Cups, lemons,
+6. **Ice melts.** Any ice left at the end of the day is gone. Cups, lemons,
    and sugar carry forward.
+
+> The chaos spec is `docs/chaos-generator.md`. Two of its five scenarios (the
+> TikTok lemon cap and the bad review) are deferred — they need persistent
+> state across days. `features/chaos-events.md` has the scope decision.
 
 ### Demand
 

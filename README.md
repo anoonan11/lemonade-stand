@@ -43,6 +43,12 @@ That's the whole setup — no backend, no database, no services.
 5. **Read the results,** then move to the next day. Leftover ice melts
    overnight; cups, lemons, and sugar carry over.
 
+**Watch for chaos.** Each day rolls one chance of disaster, announced on the
+results screen: pestilence (15% — the lemons already in your cooler rot before
+you open; lemons bought that day are fine), a thunderstorm (20% — nobody walks
+by), or a windstorm (10% — a quarter of the crowd stays home and half your
+sugar blows away for good). The other 55% of days are ordinary.
+
 The game ends after day 10, or earlier if you go bankrupt — no lemonade you can
 make and no money to buy the ingredients for even one cup. Either way your
 final cash goes on the leaderboard, which persists in `localStorage`.
