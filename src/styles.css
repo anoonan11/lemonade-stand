@@ -528,6 +528,28 @@ body {
   color: var(--warn-text);
 }
 
+/* Chaos banner — a chaos event struck the day. Louder than a warn notice:
+   big emoji, accent double-ring, sits above the day heading. */
+.chaos-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: var(--warn-bg);
+  border: 1px solid var(--lemon-deep);
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px var(--lemon);
+  color: var(--warn-text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.chaos-emoji {
+  flex: none;
+  font-size: 1.6rem;
+}
+
 /* Game over */
 
 .outcome.win {
